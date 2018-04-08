@@ -16,6 +16,8 @@ trait SparkTesting { self: BeforeAndAfterAll =>
     .setMaster("local[*]")
     .setAppName("test")
     .set("spark.ui.enabled", "false")
+    .set("executor-memory", "4g")
+    .set("driver-memory", "5g")
     .set("spark.app.id", appID)
 
   private var s: SparkSession = _
