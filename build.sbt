@@ -90,7 +90,8 @@ lazy val framelessSettings = Seq(
     "com.chuusai" %% "shapeless" % shapeless,
     "org.scalatest" %% "scalatest" % scalatest % "test",
     "org.scalacheck" %% "scalacheck" % scalacheck % "test"),
-  javaOptions in Test ++= Seq("-Xmx1G"),
+  // https://github.com/holdenk/spark-testing-base#minimum-memory-requirements-and-ooms
+  javaOptions in Test ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled"),
   fork in Test := true,
   parallelExecution in Test := false
 )
