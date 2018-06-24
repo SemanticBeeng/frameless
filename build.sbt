@@ -1,6 +1,6 @@
-val sparkVersion = "2.2.1"
-val catsCoreVersion = "1.1.0"
-val catsEffectVersion = "0.10"
+val sparkVersion = "2.3.1"
+val catsCoreVersion = "1.0.1"
+val catsEffectVersion = "0.8"
 val catsMtlVersion = "0.2.3"
 val scalatest = "3.0.3"
 val shapeless = "2.3.3"
@@ -90,6 +90,7 @@ lazy val framelessSettings = Seq(
     "com.chuusai" %% "shapeless" % shapeless,
     "org.scalatest" %% "scalatest" % scalatest % "test",
     "org.scalacheck" %% "scalacheck" % scalacheck % "test"),
+  javaOptions in Test ++= Seq("-Xmx1G", "-ea"),
   // https://github.com/holdenk/spark-testing-base#minimum-memory-requirements-and-ooms
   javaOptions in Test ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled"),
   fork in Test := true,
@@ -97,6 +98,7 @@ lazy val framelessSettings = Seq(
 )
 
 lazy val commonScalacOptions = Seq(
+  "-target:jvm-1.8",
   "-deprecation",
   "-encoding", "UTF-8",
   "-feature",

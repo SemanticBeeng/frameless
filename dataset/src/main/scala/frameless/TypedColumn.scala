@@ -71,7 +71,7 @@ abstract class AbstractTypedColumn[T, U]
   def untyped: Column = new Column(expr)
 
   private def equalsTo[TT, W](other: ThisType[TT, U])(implicit w: With.Aux[T, TT, W]): ThisType[W, Boolean] = typed {
-    if (uencoder.nullable && uencoder.catalystRepr.typeName != "struct") EqualNullSafe(self.expr, other.expr)
+    if (uencoder.nullable) EqualNullSafe(self.expr, other.expr)
     else EqualTo(self.expr, other.expr)
   }
 
@@ -280,6 +280,27 @@ abstract class AbstractTypedColumn[T, U]
     */
   def *(u: U)(implicit n: CatalystNumeric[U]): ThisType[T, U] =
     typed(self.untyped.multiply(u))
+
+  /** Modulo (a.k.a. remainder) expression.
+    *
+    * apache/spark
+    */
+  def mod[Out: TypedEncoder, TT, W](other: ThisType[TT, U])(implicit n: CatalystNumeric[U], w: With.Aux[T, TT, W]): ThisType[W, Out] =
+    typed(self.untyped.mod(other.untyped))
+
+  /** Modulo (a.k.a. remainder) expression.
+    *
+    * apache/spark
+    */
+  def %[TT, W](other: ThisType[TT, U])(implicit n: CatalystNumeric[U], w: With.Aux[T, TT, W]): ThisType[W, U] =
+    mod(other)
+
+  /** Modulo (a.k.a. remainder) expression.
+    *
+    * apache/spark
+    */
+  def %(u: U)(implicit n: CatalystNumeric[U]): ThisType[T, U] =
+    typed(self.untyped.mod(u))
 
   /** Division this expression by another expression.
     * {{{
@@ -498,6 +519,34 @@ abstract class AbstractTypedColumn[T, U]
                     w1: With.Aux[T, TT1, W1],
                     w2: With.Aux[W1, TT2, W2]): ThisType[W2, String] =
     typed(self.untyped.substr(startPos.untyped, len.untyped))
+
+  /** SQL like expression. Returns a boolean column based on a SQL LIKE match.
+    * {{{
+    *   val ds = TypedDataset.create(X2("foo", "bar") :: Nil)
+    *   // true
+    *   ds.select(ds('a).like("foo"))
+    *
+    *   // Selected column has value "bar"
+    *   ds.select(when(ds('a).like("f"), ds('a)).otherwise(ds('b))
+    * }}}
+    * apache/spark
+    */
+  def like(literal: String)(implicit ev: U =:= String): ThisType[T, Boolean] =
+    typed(self.untyped.like(literal))
+
+  /** SQL RLIKE expression (LIKE with Regex). Returns a boolean column based on a regex match.
+    * {{{
+    *   val ds = TypedDataset.create(X1("foo") :: Nil)
+    *   // true
+    *   ds.select(ds('a).rlike("foo"))
+    *
+    *   // true
+    *   ds.select(ds('a).rlike(".*))
+    * }}}
+    * apache/spark
+    */
+  def rlike(literal: String)(implicit ev: U =:= String): ThisType[T, Boolean] =
+    typed(self.untyped.rlike(literal))
 
   /** String contains another string literal.
     * {{{
