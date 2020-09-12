@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-val sparkVersion = "2.3.1"
-val catsCoreVersion = "1.0.1"
-val catsEffectVersion = "0.8"
-val catsMtlVersion = "0.2.3"
-val scalatest = "3.0.3"
-val shapeless = "2.3.3"
-val scalacheck = "1.13.5"
-=======
 val sparkVersion = "3.0.1"
 val catsCoreVersion = "2.2.0"
 val catsEffectVersion = "2.2.0"
@@ -16,7 +7,6 @@ val scalatestplus = "3.1.0.0-RC2"
 val shapeless = "2.3.3"
 val scalacheck = "1.14.3"
 val irrecVersion = "0.3.0"
->>>>>>> upstream/master
 
 lazy val root = Project("frameless", file("." + "frameless")).in(file("."))
   .aggregate(core, cats, dataset, ml, docs)
@@ -106,42 +96,10 @@ lazy val framelessSettings = Seq(
     "org.scalatestplus" %% "scalatestplus-scalacheck" % scalatestplus % "test",
     "org.scalacheck" %% "scalacheck" % scalacheck % "test"),
   javaOptions in Test ++= Seq("-Xmx1G", "-ea"),
-  // https://github.com/holdenk/spark-testing-base#minimum-memory-requirements-and-ooms
-  javaOptions in Test ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled"),
   fork in Test := true,
   parallelExecution in Test := false
 ) ++ consoleSettings
 
-<<<<<<< HEAD
-lazy val commonScalacOptions = Seq(
-  "-target:jvm-1.8",
-  "-deprecation",
-  "-encoding", "UTF-8",
-  "-feature",
-  "-unchecked",
-  "-Xfatal-warnings",
-  "-Xlint:-missing-interpolator,_",
-  "-Yinline-warnings",
-  "-Yno-adapted-args",
-  "-Ywarn-dead-code",
-  "-Ywarn-numeric-widen",
-  "-Ywarn-value-discard",
-  "-language:existentials",
-  "-language:experimental.macros",
-  "-language:implicitConversions",
-  "-language:higherKinds",
-  "-Xfuture")
-
-lazy val warnUnusedImport = Seq(
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 10)) =>
-        Seq()
-      case Some((2, n)) if n >= 11 =>
-        Seq("-Ywarn-unused-import")
-    }
-  },
-=======
 def commonScalacOptions(scalaVersion: String): Seq[String] = {
 
   val versionSpecific = CrossVersion.partialVersion(scalaVersion) match {
@@ -170,7 +128,6 @@ def commonScalacOptions(scalaVersion: String): Seq[String] = {
 }
 
 lazy val consoleSettings = Seq(
->>>>>>> upstream/master
   scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
 )
@@ -275,3 +232,5 @@ lazy val copyReadmeImpl = Def.task {
   val to   = baseDirectory.value / "docs" / "src" / "main" / "tut" / "README.md"
   sbt.IO.copy(List((from, to)), overwrite = true, preserveLastModified = true, preserveExecutable = true)
 }
+
+
