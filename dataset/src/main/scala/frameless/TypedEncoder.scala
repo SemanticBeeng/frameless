@@ -42,7 +42,7 @@ object TypedEncoder {
   def apply[T: TypedEncoder]: TypedEncoder[T] = implicitly[TypedEncoder[T]]
 
   implicit val stringEncoder: TypedEncoder[String] = new TypedEncoder[String] {
-    def nullable: Boolean = true
+    def nullable: Boolean = false
 
     def jvmRepr: DataType = FramelessInternals.objectTypeFor[String]
     def catalystRepr: DataType = StringType
@@ -231,7 +231,7 @@ object TypedEncoder {
 
           case ByteType => path
 
-          case otherwise => MapObjects(encodeT.toCatalyst, path, encodeT.jvmRepr, encodeT.nullable)
+          case _ => MapObjects(encodeT.toCatalyst _, path, encodeT.jvmRepr, encodeT.nullable)
         }
 
       def fromCatalyst(path: Expression): Expression =
@@ -245,8 +245,8 @@ object TypedEncoder {
 
           case ByteType => path
 
-          case otherwise =>
-            Invoke(MapObjects(encodeT.fromCatalyst, path, encodeT.catalystRepr, encodeT.nullable), "array", jvmRepr)
+          case _ =>
+            Invoke(MapObjects(encodeT.fromCatalyst _, path, encodeT.catalystRepr, encodeT.nullable), "array", jvmRepr)
         }
     }
 
@@ -265,7 +265,7 @@ object TypedEncoder {
         def toCatalyst(path: Expression): Expression =
           if (ScalaReflection.isNativeType(encodeT.value.jvmRepr))
             NewInstance(classOf[GenericArrayData], path :: Nil, catalystRepr)
-          else MapObjects(encodeT.value.toCatalyst, path, encodeT.value.jvmRepr, encodeT.value.nullable)
+          else MapObjects(encodeT.value.toCatalyst _, path, encodeT.value.jvmRepr, encodeT.value.nullable)
 
         def fromCatalyst(path: Expression): Expression =
           MapObjects(
@@ -374,7 +374,7 @@ object TypedEncoder {
               "booleanValue",
               BooleanType)
 
-          case other => underlying.toCatalyst(UnwrapOption(underlying.jvmRepr, path))
+          case _ => underlying.toCatalyst(UnwrapOption(underlying.jvmRepr, path))
         }
       }
 

@@ -3,13 +3,12 @@ package frameless
 import java.util
 
 import frameless.functions.CatalystExplodableCollection
-
 import frameless.ops._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Literal}
-import org.apache.spark.sql.catalyst.plans.logical.Join
-import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner, LeftOuter, RightOuter}
+import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint}
+import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.types.StructType
 import shapeless._
 import shapeless.labelled.FieldType
@@ -106,15 +105,23 @@ class TypedDataset[T] protected[frameless](val dataset: Dataset[T])(implicit val
         i3: TypedEncoder[Out]
       ): TypedDataset[Out] = {
 
-        val cols = columns.toList[UntypedExpression[T]].map(c => new Column(c.expr))
+      val underlyingColumns = columns.toList[UntypedExpression[T]]
+      val cols: Seq[Column] = for {
+        (c, i) <- columns.toList[UntypedExpression[T]].zipWithIndex
+      } yield new Column(c.expr).as(s"_${i+1}")
 
-        val selected = dataset.toDF()
-          .agg(cols.head.alias("_1"), cols.tail: _*)
-          .as[Out](TypedExpressionEncoder[Out])
-          .filter("_1 is not null") // otherwise spark produces List(null) for empty datasets
+      // Workaround to SPARK-20346. One alternative is to allow the result to be Vector(null) for empty DataFrames.
+      // Another one would be to return an Option.
+      val filterStr = (
+        for {
+          (c, i) <- underlyingColumns.zipWithIndex
+          if !c.uencoder.nullable
+        } yield s"_${i+1} is not null"
+        ).mkString(" or ")
 
-        TypedDataset.create[Out](selected)
-      }
+      val selected = dataset.toDF().agg(cols.head, cols.tail:_*).as[Out](TypedExpressionEncoder[Out])
+      TypedDataset.create[Out](if (filterStr.isEmpty) selected else selected.filter(filterStr))
+    }
   }
 
   /** Returns a new [[TypedDataset]] where each record has been mapped on to the specified type. */
@@ -601,15 +608,9 @@ class TypedDataset[T] protected[frameless](val dataset: Dataset[T])(implicit val
     * returning a `Tuple2` for each pair where condition evaluates to true.
     */
   def joinFull[U](other: TypedDataset[U])(condition: TypedColumn[T with U, Boolean])
-    (implicit e: TypedEncoder[(Option[T], Option[U])]): TypedDataset[(Option[T], Option[U])] = {
-      import FramelessInternals._
-      val leftPlan = logicalPlan(dataset)
-      val rightPlan = logicalPlan(other.dataset)
-      val join = disambiguate(Join(leftPlan, rightPlan, FullOuter, Some(condition.expr)))
-      val joinedPlan = joinPlan(dataset, join, leftPlan, rightPlan)
-      val joinedDs = mkDataset(dataset.sqlContext, joinedPlan, TypedExpressionEncoder[(Option[T], Option[U])])
-      TypedDataset.create[(Option[T], Option[U])](joinedDs)
-    }
+    (implicit e: TypedEncoder[(Option[T], Option[U])]): TypedDataset[(Option[T], Option[U])] =
+    new TypedDataset(self.dataset.joinWith(other.dataset, condition.untyped, "full")
+      .as[(Option[T], Option[U])](TypedExpressionEncoder[(Option[T], Option[U])]))
 
   /** Computes the inner join of `this` `Dataset` with the `other` `Dataset`,
     * returning a `Tuple2` for each pair where condition evaluates to true.
@@ -619,7 +620,7 @@ class TypedDataset[T] protected[frameless](val dataset: Dataset[T])(implicit val
       import FramelessInternals._
       val leftPlan = logicalPlan(dataset)
       val rightPlan = logicalPlan(other.dataset)
-      val join = disambiguate(Join(leftPlan, rightPlan, Inner, Some(condition.expr)))
+      val join = disambiguate(Join(leftPlan, rightPlan, Inner, Some(condition.expr), JoinHint.NONE))
       val joinedPlan = joinPlan(dataset, join, leftPlan, rightPlan)
       val joinedDs = mkDataset(dataset.sqlContext, joinedPlan, TypedExpressionEncoder[(T, U)])
       TypedDataset.create[(T, U)](joinedDs)
@@ -629,16 +630,9 @@ class TypedDataset[T] protected[frameless](val dataset: Dataset[T])(implicit val
     * returning a `Tuple2` for each pair where condition evaluates to true.
     */
   def joinLeft[U](other: TypedDataset[U])(condition: TypedColumn[T with U, Boolean])
-    (implicit e: TypedEncoder[(T, Option[U])]): TypedDataset[(T, Option[U])] = {
-      import FramelessInternals._
-      val leftPlan = logicalPlan(dataset)
-      val rightPlan = logicalPlan(other.dataset)
-      val join = disambiguate(Join(leftPlan, rightPlan, LeftOuter, Some(condition.expr)))
-      val joinedPlan = joinPlan(dataset, join, leftPlan, rightPlan)
-      val joinedDs = mkDataset(dataset.sqlContext, joinedPlan, TypedExpressionEncoder[(T, Option[U])])
-
-      TypedDataset.create[(T, Option[U])](joinedDs)
-    }
+    (implicit e: TypedEncoder[(T, Option[U])]): TypedDataset[(T, Option[U])] =
+      new TypedDataset(self.dataset.joinWith(other.dataset, condition.untyped, "left_outer")
+        .as[(T, Option[U])](TypedExpressionEncoder[(T, Option[U])]))
 
   /** Computes the left semi join of `this` `Dataset` with the `other` `Dataset`,
     * returning a `Tuple2` for each pair where condition evaluates to true.
@@ -658,15 +652,9 @@ class TypedDataset[T] protected[frameless](val dataset: Dataset[T])(implicit val
     * returning a `Tuple2` for each pair where condition evaluates to true.
     */
   def joinRight[U](other: TypedDataset[U])(condition: TypedColumn[T with U, Boolean])
-    (implicit e: TypedEncoder[(Option[T], U)]): TypedDataset[(Option[T], U)] = {
-      import FramelessInternals._
-      val leftPlan = logicalPlan(dataset)
-      val rightPlan = logicalPlan(other.dataset)
-      val join = disambiguate(Join(leftPlan, rightPlan, RightOuter, Some(condition.expr)))
-      val joinedPlan = joinPlan(dataset, join, leftPlan, rightPlan)
-      val joinedDs = mkDataset(dataset.sqlContext, joinedPlan, TypedExpressionEncoder[(Option[T], U)])
-      TypedDataset.create[(Option[T], U)](joinedDs)
-    }
+    (implicit e: TypedEncoder[(Option[T], U)]): TypedDataset[(Option[T], U)] =
+    new TypedDataset(self.dataset.joinWith(other.dataset, condition.untyped, "right_outer")
+      .as[(Option[T], U)](TypedExpressionEncoder[(Option[T], U)]))
 
   private def disambiguate(join: Join): Join = {
     val plan = FramelessInternals.ofRows(dataset.sparkSession, join).queryExecution.analyzed.asInstanceOf[Join]
@@ -914,11 +902,11 @@ class TypedDataset[T] protected[frameless](val dataset: Dataset[T])(implicit val
         i2: Tupler.Aux[Out0, Out],
         i3: TypedEncoder[Out]
       ): TypedDataset[Out] = {
-        val selected = dataset.toDF()
+        val base = dataset.toDF()
           .select(columns.toList[UntypedExpression[T]].map(c => new Column(c.expr)):_*)
-          .as[Out](TypedExpressionEncoder[Out])
+        val selected = base.as[Out](TypedExpressionEncoder[Out])
 
-          TypedDataset.create[Out](selected)
+        TypedDataset.create[Out](selected)
       }
   }
 

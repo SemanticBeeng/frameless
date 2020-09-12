@@ -3,13 +3,14 @@ package frameless
 import java.time.Instant
 
 import org.scalacheck.Prop._
-import org.scalacheck.{Arbitrary, Gen, Prop}
-import org.scalatest.Matchers._
+import org.scalacheck.{Arbitrary, Gen, Prop}, Arbitrary.arbitrary
+import org.scalatest.matchers.should.Matchers
 import shapeless.test.illTyped
+import ceedubs.irrec.regex.gen.CharRegexGen.genCharRegexAndCandidate
 
 import scala.math.Ordering.Implicits._
 
-class ColumnTests extends TypedDatasetSuite {
+class ColumnTests extends TypedDatasetSuite with Matchers {
 
   private implicit object OrderingImplicits {
     implicit val sqlDateOrdering: Ordering[SQLDate] = Ordering.by(_.days)
@@ -196,18 +197,19 @@ class ColumnTests extends TypedDatasetSuite {
     import spark.implicits._
 
     check {
-      forAll { (a: String, b: String) =>
+      forAll(genCharRegexAndCandidate[Char], arbitrary[String]) { (r, b) =>
+        val a = r.candidate.mkString
         val ds = TypedDataset.create(X2(a, b) :: Nil)
 
         val typedLike = ds
-          .select(ds('a).rlike(a), ds('b).rlike(a), ds('a).rlike(".*"))
+          .select(ds('a).rlike(r.r.pprint), ds('b).rlike(r.r.pprint), ds('a).rlike(".*"))
           .collect()
           .run()
           .toList
 
         val untypedDs = ds.toDF()
         val untypedLike = untypedDs
-          .select(untypedDs("a").rlike(a), untypedDs("b").rlike(a), untypedDs("a").rlike(".*"))
+          .select(untypedDs("a").rlike(r.r.pprint), untypedDs("b").rlike(r.r.pprint), untypedDs("a").rlike(".*"))
           .as[(Boolean, Boolean, Boolean)]
           .collect()
           .toList

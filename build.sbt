@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 val sparkVersion = "2.3.1"
 val catsCoreVersion = "1.0.1"
 val catsEffectVersion = "0.8"
@@ -5,6 +6,17 @@ val catsMtlVersion = "0.2.3"
 val scalatest = "3.0.3"
 val shapeless = "2.3.3"
 val scalacheck = "1.13.5"
+=======
+val sparkVersion = "3.0.1"
+val catsCoreVersion = "2.2.0"
+val catsEffectVersion = "2.2.0"
+val catsMtlVersion = "0.7.1"
+val scalatest = "3.2.2"
+val scalatestplus = "3.1.0.0-RC2"
+val shapeless = "2.3.3"
+val scalacheck = "1.14.3"
+val irrecVersion = "0.3.0"
+>>>>>>> upstream/master
 
 lazy val root = Project("frameless", file("." + "frameless")).in(file("."))
   .aggregate(core, cats, dataset, ml, docs)
@@ -14,17 +26,15 @@ lazy val root = Project("frameless", file("." + "frameless")).in(file("."))
 lazy val core = project
   .settings(name := "frameless-core")
   .settings(framelessSettings: _*)
-  .settings(warnUnusedImport: _*)
   .settings(publishSettings: _*)
 
 
 lazy val cats = project
   .settings(name := "frameless-cats")
   .settings(framelessSettings: _*)
-  .settings(warnUnusedImport: _*)
   .settings(publishSettings: _*)
   .settings(
-    addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
     scalacOptions += "-Ypartial-unification"
   )
   .settings(libraryDependencies ++= Seq(
@@ -39,19 +49,18 @@ lazy val cats = project
 lazy val dataset = project
   .settings(name := "frameless-dataset")
   .settings(framelessSettings: _*)
-  .settings(warnUnusedImport: _*)
   .settings(framelessTypedDatasetREPL: _*)
   .settings(publishSettings: _*)
   .settings(libraryDependencies ++= Seq(
-    "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-    "org.apache.spark" %% "spark-sql"  % sparkVersion % "provided"
+    "org.apache.spark" %% "spark-core"      % sparkVersion % "provided",
+    "org.apache.spark" %% "spark-sql"       % sparkVersion % "provided",
+    "net.ceedubs"      %% "irrec-regex-gen" % irrecVersion % Test
   ))
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val ml = project
   .settings(name := "frameless-ml")
   .settings(framelessSettings: _*)
-  .settings(warnUnusedImport: _*)
   .settings(framelessTypedDatasetREPL: _*)
   .settings(publishSettings: _*)
   .settings(libraryDependencies ++= Seq(
@@ -67,7 +76,8 @@ lazy val ml = project
 lazy val docs = project
   .settings(framelessSettings: _*)
   .settings(noPublishSettings: _*)
-  .settings(tutSettings: _*)
+  .settings(scalacOptions --= Seq("-Xfatal-warnings"))
+  .enablePlugins(TutPlugin)
   .settings(crossTarget := file(".") / "docs" / "target")
   .settings(libraryDependencies ++= Seq(
     "org.apache.spark" %% "spark-core" % sparkVersion,
@@ -75,28 +85,34 @@ lazy val docs = project
     "org.apache.spark" %% "spark-mllib"  % sparkVersion
   ))
   .settings(
-    addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
-    scalacOptions += "-Ypartial-unification"
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
+    scalacOptions ++= Seq(
+      "-Ypartial-unification",
+      "-Ydelambdafy:inline"
+    )
   )
   .dependsOn(dataset, cats, ml)
 
 lazy val framelessSettings = Seq(
   organization := "org.typelevel",
-  scalaVersion := "2.11.12",
-  scalacOptions ++= commonScalacOptions,
+  crossScalaVersions := Seq("2.12.10"),
+  scalaVersion := crossScalaVersions.value.last,
+  scalacOptions ++= commonScalacOptions(scalaVersion.value),
   licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
   testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oDF"),
   libraryDependencies ++= Seq(
     "com.chuusai" %% "shapeless" % shapeless,
     "org.scalatest" %% "scalatest" % scalatest % "test",
+    "org.scalatestplus" %% "scalatestplus-scalacheck" % scalatestplus % "test",
     "org.scalacheck" %% "scalacheck" % scalacheck % "test"),
   javaOptions in Test ++= Seq("-Xmx1G", "-ea"),
   // https://github.com/holdenk/spark-testing-base#minimum-memory-requirements-and-ooms
   javaOptions in Test ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled"),
   fork in Test := true,
   parallelExecution in Test := false
-)
+) ++ consoleSettings
 
+<<<<<<< HEAD
 lazy val commonScalacOptions = Seq(
   "-target:jvm-1.8",
   "-deprecation",
@@ -125,6 +141,36 @@ lazy val warnUnusedImport = Seq(
         Seq("-Ywarn-unused-import")
     }
   },
+=======
+def commonScalacOptions(scalaVersion: String): Seq[String] = {
+
+  val versionSpecific = CrossVersion.partialVersion(scalaVersion) match {
+    case Some((2, 11)) =>
+      Seq("-Xlint:-missing-interpolator,_", "-Yinline-warnings")
+    case Some((2, n)) if n >= 12 =>
+      Seq("-Xlint:-missing-interpolator,-unused,_")
+  }
+
+  Seq(
+    "-target:jvm-1.8",
+    "-deprecation",
+    "-encoding", "UTF-8",
+    "-feature",
+    "-unchecked",
+    "-Xfatal-warnings",
+    "-Yno-adapted-args",
+    "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen",
+    "-Ywarn-unused-import",
+    "-Ywarn-value-discard",
+    "-language:existentials",
+    "-language:implicitConversions",
+    "-language:higherKinds",
+    "-Xfuture") ++ versionSpecific
+}
+
+lazy val consoleSettings = Seq(
+>>>>>>> upstream/master
   scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
 )
@@ -157,7 +203,6 @@ lazy val framelessTypedDatasetREPL = Seq(
 )
 
 lazy val publishSettings = Seq(
-  useGpg := true,
   publishMavenStyle := true,
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
@@ -210,8 +255,8 @@ lazy val publishSettings = Seq(
 )
 
 lazy val noPublishSettings = Seq(
-  publish := (),
-  publishLocal := (),
+  publish := (()),
+  publishLocal := (()),
   publishArtifact := false
 )
 
@@ -228,5 +273,5 @@ lazy val copyReadme = taskKey[Unit]("copy for website generation")
 lazy val copyReadmeImpl = Def.task {
   val from = baseDirectory.value / "README.md"
   val to   = baseDirectory.value / "docs" / "src" / "main" / "tut" / "README.md"
-  sbt.IO.copy(List((from, to)), overwrite = true, preserveLastModified = true)
+  sbt.IO.copy(List((from, to)), overwrite = true, preserveLastModified = true, preserveExecutable = true)
 }

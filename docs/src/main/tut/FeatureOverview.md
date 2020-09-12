@@ -145,8 +145,8 @@ aptTypedDs.select(aptTypedDs('city), aptTypedDs('city)).as[UpdatedSurface]
 ### Projections
 
 We often want to work with a subset of the fields in a dataset.
-Projections allows to easily select the fields we are interested
-while preserving their initial name and types for extra safety.
+Projections allow us to easily select our fields of interest
+while preserving their initial names and types for extra safety.
 
 Here is an example using the `TypedDataset[Apartment]` with an additional column:
 
@@ -306,7 +306,7 @@ aptTypedDs2.withColumnTupled(
    otherwise(lit(0.0))).show(8).run()
 ```
 
-A simple way to add a column without loosing important schema information is
+A simple way to add a column without losing important schema information is
 to project the entire source schema into a single column using the `asCol()` method.
 
 ```tut:book

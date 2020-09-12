@@ -1,18 +1,19 @@
 language: scala
 sudo: false
-scala:
-  - 2.11.12
-
+jdk: openjdk8
 sbt_args: "-J-Xmx2G"
 
 jobs:
   include:
-    - stage: Documentation
+    - stage: Documentation 2.12
       env: PHASE=A
-    - stage: Unit Tests
+      scala: 2.12.10
+    - stage: Unit Tests 2.12
       env: PHASE=B
-    - stage: Publish
+      scala: 2.12.10
+    - stage: Publish 2.12
       env: PHASE=C
+      scala: 2.12.10
 
 script:
   - scripts/travis-publish.sh
