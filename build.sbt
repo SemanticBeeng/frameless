@@ -2,11 +2,11 @@ val sparkVersion = "3.0.1"
 val catsCoreVersion = "2.2.0"
 val catsEffectVersion = "2.2.0"
 val catsMtlVersion = "0.7.1"
-val scalatest = "3.2.2"
+val scalatest = "3.2.3"
 val scalatestplus = "3.1.0.0-RC2"
 val shapeless = "2.3.3"
-val scalacheck = "1.14.3"
-val irrecVersion = "0.3.0"
+val scalacheck = "1.15.1"
+val irrecVersion = "0.4.0"
 
 lazy val root = Project("frameless", file("." + "frameless")).in(file("."))
   .aggregate(core, cats, dataset, ml, docs)
@@ -24,7 +24,7 @@ lazy val cats = project
   .settings(framelessSettings: _*)
   .settings(publishSettings: _*)
   .settings(
-    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.1" cross CrossVersion.full),
     scalacOptions += "-Ypartial-unification"
   )
   .settings(libraryDependencies ++= Seq(
@@ -75,7 +75,7 @@ lazy val docs = project
     "org.apache.spark" %% "spark-mllib"  % sparkVersion
   ))
   .settings(
-    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.1" cross CrossVersion.full),
     scalacOptions ++= Seq(
       "-Ypartial-unification",
       "-Ydelambdafy:inline"
