@@ -10,6 +10,8 @@ project/.boot/
 project/.sbtboot/
 project/.ivy/
 project/plugins/project/
+.bsp/
+patch.diff
 
 # Scala-IDE specific
 .scala_dependencies
