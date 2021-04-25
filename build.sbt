@@ -1,11 +1,11 @@
-val sparkVersion = "3.0.1"
-val catsCoreVersion = "2.3.0"
-val catsEffectVersion = "2.3.0"
+val sparkVersion = "3.1.1"
+val catsCoreVersion = "2.5.0"
+val catsEffectVersion = "2.4.0"
 val catsMtlVersion = "0.7.1"
-val scalatest = "3.2.3"
+val scalatest = "3.2.8"
 val scalatestplus = "3.1.0.0-RC2"
-val shapeless = "2.3.3"
-val scalacheck = "1.15.1"
+val shapeless = "2.3.4"
+val scalacheck = "1.15.3"
 val irrecVersion = "0.4.0"
 
 val Scala212 = "2.12.12"
@@ -18,9 +18,7 @@ ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowArtifactUpload := false
 
 ThisBuild / githubWorkflowBuild := Seq(
-  WorkflowStep.Use("actions",
-                   "setup-python",
-                   "v2",
+  WorkflowStep.Use(UseRef.Public("actions", "setup-python", "v2"),
                    name = Some("Setup Python"),
                    params = Map("python-version" -> "3.x")
   ),
@@ -64,7 +62,7 @@ lazy val cats = project
   .settings(framelessSettings: _*)
   .settings(publishSettings: _*)
   .settings(
-    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.1" cross CrossVersion.full),
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full),
     scalacOptions += "-Ypartial-unification"
   )
   .settings(libraryDependencies ++= Seq(
@@ -115,7 +113,7 @@ lazy val docs = project
     "org.apache.spark" %% "spark-mllib"  % sparkVersion
   ))
   .settings(
-    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.1" cross CrossVersion.full),
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full),
     scalacOptions ++= Seq(
       "-Ypartial-unification",
       "-Ydelambdafy:inline"
@@ -202,9 +200,9 @@ lazy val publishSettings = Seq(
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
     if (isSnapshot.value)
-      Some("snapshots" at nexus + "content/repositories/snapshots")
+      Some(Opts.resolver.sonatypeSnapshots)
     else
-      Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+      Some(Opts.resolver.sonatypeStaging)
   },
   publishArtifact in Test := false,
   pomIncludeRepository := Function.const(false),
